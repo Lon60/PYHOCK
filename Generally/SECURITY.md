@@ -6,7 +6,7 @@ Use this section to inform users about the versions of PYHOCK that are currently
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.5.x   | :white_check_mark: |
+| 1.5.x   | :x:                | # :white_check_mark:
 | < 1.5   | :x:                |
 
 ## Reporting a Vulnerability
