@@ -1,4 +1,4 @@
-# **PYHOCK - Tipp: Do not Use PYHOCK right now(better Version is on the Way)**
+# **PYHOCK**
 
 <img src="Generally/LOGO_PYHOCK.jpg" alt="Logo" height="150">
 
