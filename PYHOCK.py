@@ -1,193 +1,196 @@
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from cryptography.fernet import Fernet
-from cryptography.fernet import InvalidToken
-import os
 import qdarkstyle
+import qtmodern.styles
+import qtmodern.windows
 
 class EncryptWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(EncryptWidget, self).__init__(parent)
+
         layout = QtWidgets.QVBoxLayout(self)
 
-        # File path input
-        self.file_path_label = QtWidgets.QLabel("File to encrypt")
-        self.file_path_label.setStyleSheet("QLabel { font-weight: bold; }")
-        self.file_path_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.file_path_input = QtWidgets.QLineEdit()
-        self.file_path_button = QtWidgets.QPushButton("Browse")
-        self.file_path_button.clicked.connect(self.browse_file)
+        self.file_to_encrypt_label = QtWidgets.QLabel("File to encrypt")
+        self.file_to_encrypt_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.file_to_encrypt_label.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
 
-        # Key path input
-        self.key_path_label = QtWidgets.QLabel("Key file path")
-        self.key_path_label.setStyleSheet("QLabel { font-weight: bold; }")
-        self.key_path_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.key_path_input = QtWidgets.QLineEdit()
-        self.key_path_button = QtWidgets.QPushButton("Browse")
-        self.key_path_button.clicked.connect(self.browse_key_directory)
+        self.file_to_encrypt_edit = QtWidgets.QLineEdit()
+        self.file_to_encrypt_edit.setMinimumWidth(200)
+        self.file_to_encrypt_button = QtWidgets.QPushButton("Browse")
 
-        # Checkbox to determine whether to generate a key
-        self.generate_key_checkbox = QtWidgets.QCheckBox("Generate key")
-        self.generate_key_checkbox.setChecked(True)
-        self.generate_key_checkbox.toggled.connect(self.toggle_key_entry)
+        self.key_save_location_label = QtWidgets.QLabel("Location to save the key")
+        self.key_save_location_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.key_save_location_label.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
 
-        # Key input (disabled by default)
-        self.key_input = QtWidgets.QLineEdit()
-        self.key_input.setDisabled(True)
+        self.key_save_location_edit = QtWidgets.QLineEdit()
+        self.key_save_location_edit.setMinimumWidth(200)
+        self.key_save_location_button = QtWidgets.QPushButton("Browse")
 
-        # Encrypt button
+        self.key_checkbox = QtWidgets.QCheckBox("Generate a new key")
+        self.key_checkbox.setChecked(True)
+
+        self.custom_key_label = QtWidgets.QLabel("Custom key (Optional)")
+        self.custom_key_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.custom_key_label.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
+
+        self.custom_key_edit = QtWidgets.QLineEdit()
+        self.custom_key_edit.setDisabled(True)
+
         self.encrypt_button = QtWidgets.QPushButton("Encrypt File")
         self.encrypt_button.clicked.connect(self.encrypt_file)
 
-        # Add widgets to layout
-        layout.addWidget(self.file_path_label)
-        layout.addWidget(self.file_path_input)
-        layout.addWidget(self.file_path_button)
-        layout.addWidget(self.key_path_label)
-        layout.addWidget(self.key_path_input)
-        layout.addWidget(self.key_path_button)
-        layout.addWidget(self.generate_key_checkbox)
-        layout.addWidget(self.key_input)
+        layout.addWidget(self.file_to_encrypt_label)
+        layout.addWidget(self.file_to_encrypt_edit)
+        layout.addWidget(self.file_to_encrypt_button)
+        layout.addWidget(self.key_save_location_label)
+        layout.addWidget(self.key_save_location_edit)
+        layout.addWidget(self.key_save_location_button)
+        layout.addWidget(self.key_checkbox)
+        layout.addWidget(self.custom_key_label)
+        layout.addWidget(self.custom_key_edit)
         layout.addWidget(self.encrypt_button)
 
+        self.file_to_encrypt_button.clicked.connect(self.browse_file)
+        self.key_save_location_button.clicked.connect(self.browse_location)
+        self.key_checkbox.stateChanged.connect(self.toggle_custom_key)
+
     def browse_file(self):
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select File")
-        if file_path:
-            self.file_path_input.setText(file_path)
+        file_name, _ = QFileDialog.getOpenFileName()
+        if file_name:
+            self.file_to_encrypt_edit.setText(file_name)
 
-    def browse_key_directory(self):
-        key_directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Directory")
-        if key_directory:
-            self.key_path_input.setText(key_directory)
+    def browse_location(self):
+        dir_name = QFileDialog.getExistingDirectory()
+        if dir_name:
+            self.key_save_location_edit.setText(dir_name)
 
-    def toggle_key_entry(self, checked):
-        self.key_input.setDisabled(checked)
+    def toggle_custom_key(self, state):
+        if state == QtCore.Qt.Checked:
+            self.custom_key_edit.setDisabled(True)
+        else:
+            self.custom_key_edit.setDisabled(False)
 
     def encrypt_file(self):
-        file_path = self.file_path_input.text()
-        key_path = self.key_path_input.text()
-        generate_key = self.generate_key_checkbox.isChecked()
+        file_to_encrypt = self.file_to_encrypt_edit.text()
+        key_save_location = self.key_save_location_edit.text()
 
-        if not os.path.isfile(file_path):
-            QtWidgets.QMessageBox.warning(self, "Error", "Invalid file path.")
+        if not file_to_encrypt or not key_save_location:
+            QMessageBox.warning(self, "Warning", "Please fill all the fields")
             return
 
-        if not os.path.isdir(key_path):
-            QtWidgets.QMessageBox.warning(self, "Error", "Invalid key file path.")
-            return
+        if self.key_checkbox.isChecked():
+            key = Fernet.generate_key()
+        else:
+            key = self.custom_key_edit.text().encode()
 
         try:
-            with open(file_path, "rb") as f:
-                data = f.read()
+            with open(file_to_encrypt, 'rb') as file:
+                data = file.read()
 
-            if generate_key:
-                key = Fernet.generate_key()
-            else:
-                key = self.key_input.text().encode()
+            fernet = Fernet(key)
+            encrypted = fernet.encrypt(data)
 
-            cipher_suite = Fernet(key)
-            encrypted_data = cipher_suite.encrypt(data)
+            with open(file_to_encrypt, 'wb') as file:
+                file.write(encrypted)
 
-            with open(file_path, "wb") as f:
-                f.write(encrypted_data)
+            with open(f"{key_save_location}/key.txt", 'wb') as file:
+                file.write(key)
 
-            with open(os.path.join(key_path, "key.txt"), "wb") as f:
-                f.write(key)
-
-            QtWidgets.QMessageBox.information(self, "Success", "File encrypted successfully.")
+            QMessageBox.information(self, "Success", "File encrypted successfully")
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error", str(e))
+            QMessageBox.critical(self, "Error", str(e))
 
 class DecryptWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(DecryptWidget, self).__init__(parent)
+
         layout = QtWidgets.QVBoxLayout(self)
 
-        # File path input
-        self.file_path_label = QtWidgets.QLabel("File to decrypt")
-        self.file_path_label.setStyleSheet("QLabel { font-weight: bold; }")
-        self.file_path_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.file_path_input = QtWidgets.QLineEdit()
-        self.file_path_button = QtWidgets.QPushButton("Browse")
-        self.file_path_button.clicked.connect(self.browse_file)
+        self.file_to_decrypt_label = QtWidgets.QLabel("File to decrypt")
+        self.file_to_decrypt_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.file_to_decrypt_label.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
 
-        # Key input
-        self.key_input_label = QtWidgets.QLabel("Decryption key")
-        self.key_input_label.setStyleSheet("QLabel { font-weight: bold; }")
-        self.key_input_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.key_input = QtWidgets.QLineEdit()
+        self.file_to_decrypt_edit = QtWidgets.QLineEdit()
+        self.file_to_decrypt_edit.setMinimumWidth(200)
+        self.file_to_decrypt_button = QtWidgets.QPushButton("Browse")
 
-        # Decrypt button
+        self.key_label = QtWidgets.QLabel("Key")
+        self.key_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.key_label.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
+
+        self.key_edit = QtWidgets.QLineEdit()
+        self.key_edit.setMinimumWidth(200)
+
         self.decrypt_button = QtWidgets.QPushButton("Decrypt File")
         self.decrypt_button.clicked.connect(self.decrypt_file)
 
-        # Add widgets to layout
-        layout.addWidget(self.file_path_label)
-        layout.addWidget(self.file_path_input)
-        layout.addWidget(self.file_path_button)
-        layout.addWidget(self.key_input_label)
-        layout.addWidget(self.key_input)
+        layout.addWidget(self.file_to_decrypt_label)
+        layout.addWidget(self.file_to_decrypt_edit)
+        layout.addWidget(self.file_to_decrypt_button)
+        layout.addWidget(self.key_label)
+        layout.addWidget(self.key_edit)
         layout.addWidget(self.decrypt_button)
 
+        self.file_to_decrypt_button.clicked.connect(self.browse_file)
+
     def browse_file(self):
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select File")
-        if file_path:
-            self.file_path_input.setText(file_path)
+        file_name, _ = QFileDialog.getOpenFileName()
+        if file_name:
+            self.file_to_decrypt_edit.setText(file_name)
 
     def decrypt_file(self):
-        file_path = self.file_path_input.text()
-        key = self.key_input.text().encode()
+        file_to_decrypt = self.file_to_decrypt_edit.text()
+        key = self.key_edit.text()
 
-        if not os.path.isfile(file_path):
-            QtWidgets.QMessageBox.warning(self, "Error", "Invalid file path.")
+        if not file_to_decrypt or not key:
+            QMessageBox.warning(self, "Warning", "Please fill all the fields")
             return
 
         try:
-            with open(file_path, "rb") as f:
-                data = f.read()
+            with open(file_to_decrypt, 'rb') as file:
+                data = file.read()
 
-            cipher_suite = Fernet(key)
-            decrypted = cipher_suite.decrypt(data)
+            fernet = Fernet(key.encode())
+            decrypted = fernet.decrypt(data)
 
-            with open(file_path, "wb") as f:
-                f.write(decrypted)
+            with open(file_to_decrypt, 'wb') as file:
+                file.write(decrypted)
 
-            QtWidgets.QMessageBox.information(self, "Success", "File decrypted successfully.")
-        except InvalidToken:
-            QtWidgets.QMessageBox.warning(self, "Error", "Invalid decryption key.")
+            QMessageBox.information(self, "Success", "File decrypted successfully")
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error", str(e))
+            QMessageBox.critical(self, "Error", str(e))
 
 class GenerateKeyWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(GenerateKeyWidget, self).__init__(parent)
+
         layout = QtWidgets.QVBoxLayout(self)
 
-        # Key display
-        self.key_label = QtWidgets.QLabel("Generated key")
-        self.key_display = QtWidgets.QLineEdit()
-        self.key_display.setReadOnly(True)
-
-        # Generate button
         self.generate_button = QtWidgets.QPushButton("Generate Key")
         self.generate_button.clicked.connect(self.generate_key)
 
-        # Copy button
+        self.key_label = QtWidgets.QLabel()
+        self.key_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.key_label.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
+
         self.copy_button = QtWidgets.QPushButton("Copy Key")
         self.copy_button.clicked.connect(self.copy_key)
+        self.copy_button.setDisabled(True)
 
-        # Add widgets to layout
-        layout.addWidget(self.key_label)
-        layout.addWidget(self.key_display)
         layout.addWidget(self.generate_button)
+        layout.addWidget(self.key_label)
         layout.addWidget(self.copy_button)
 
     def generate_key(self):
         key = Fernet.generate_key()
-        self.key_display.setText(key.decode())
+        self.key_label.setText(key.decode())
+        self.copy_button.setDisabled(False)
 
     def copy_key(self):
-        clipboard = QtGui.QGuiApplication.clipboard()
-        clipboard.setText(self.key_display.text())
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(self.key_label.text())
+        QMessageBox.information(self, "Success", "Key copied to clipboard")
 
 class SettingsWidget(QtWidgets.QWidget):
     def __init__(self, app, parent=None):
@@ -196,89 +199,70 @@ class SettingsWidget(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout(self)
 
-        # Dark mode checkbox
-        self.dark_mode_checkbox = QtWidgets.QCheckBox("Dark mode")
-        self.dark_mode_checkbox.stateChanged.connect(self.toggle_dark_mode)
+        self.light_mode_checkbox = QtWidgets.QCheckBox("Light mode")
+        self.light_mode_checkbox.stateChanged.connect(self.toggle_light_mode)
 
-        # Add widget to layout
-        layout.addWidget(self.dark_mode_checkbox)
+        layout.addWidget(self.light_mode_checkbox)
 
-    def toggle_dark_mode(self, state):
+    def toggle_light_mode(self, state):
         if state == QtCore.Qt.Checked:
-            self.app.setStyleSheet(qdarkstyle.load_stylesheet())
+            qtmodern.styles.light(self.app)
         else:
-            self.app.setStyleSheet("")
+            qtmodern.styles.dark(self.app)
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, app):
         super(MainWindow, self).__init__()
 
         self.app = app
-        # Create a status bar
-        self.statusBar()
+        qtmodern.styles.dark(self.app)
 
-        # Create a menu
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('PYHOCK')
+        # Create the dropdown menu
+        self.menu = QtWidgets.QComboBox()
+        self.menu.addItem("Encrypt")
+        self.menu.addItem("Decrypt")
+        self.menu.addItem("Generate Key")
+        self.menu.addItem("Settings")
+        self.menu.currentIndexChanged.connect(self.update_ui)
 
-        # Add options to the menu
-        decryptAction = QtWidgets.QAction('Decrypt', self)
-        decryptAction.triggered.connect(self.show_decrypt_widget)
+        # Create the stacked widget
+        self.stacked_widget = QtWidgets.QStackedWidget()
+        self.stacked_widget.addWidget(EncryptWidget())
+        self.stacked_widget.addWidget(DecryptWidget())
+        self.stacked_widget.addWidget(GenerateKeyWidget())
+        self.stacked_widget.addWidget(SettingsWidget(self.app))
 
-        encryptAction = QtWidgets.QAction('Encrypt', self)
-        encryptAction.triggered.connect(self.show_encrypt_widget)
+        # Create the main layout
+        top_layout = QtWidgets.QHBoxLayout()
+        top_layout.addWidget(self.menu)
+        top_layout.addStretch()
 
-        generateKeyAction = QtWidgets.QAction('Generate Key', self)
-        generateKeyAction.triggered.connect(self.show_generate_key_widget)
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.addLayout(top_layout)
+        main_layout.addWidget(self.stacked_widget)
 
-        settingsAction = QtWidgets.QAction('Settings', self)
-        settingsAction.triggered.connect(self.show_settings_widget)
+        # Create the main widget and set the main layout
+        main_widget = QtWidgets.QWidget()
+        main_widget.setLayout(main_layout)
 
-        fileMenu.addAction(decryptAction)
-        fileMenu.addAction(encryptAction)
-        fileMenu.addAction(generateKeyAction)
-        fileMenu.addAction(settingsAction)
+        # Set the main widget as the central widget
+        self.setCentralWidget(main_widget)
 
-        # Create the central widget
-        self.central_widget = QtWidgets.QStackedWidget()
-        self.setCentralWidget(self.central_widget)
+        # Set the window title
+        self.setWindowTitle("PYHOCK")
 
-        # Create the other widgets
-        self.decrypt_widget = DecryptWidget()
-        self.encrypt_widget = EncryptWidget()
-        self.generate_key_widget = GenerateKeyWidget()
-        self.settings_widget = SettingsWidget(self.app)
+        # Create ModernWindow after setting central widget
+        self.main_window = qtmodern.windows.ModernWindow(self)
 
-        # Add the widgets to the central widget
-        self.central_widget.addWidget(self.decrypt_widget)
-        self.central_widget.addWidget(self.encrypt_widget)
-        self.central_widget.addWidget(self.generate_key_widget)
-        self.central_widget.addWidget(self.settings_widget)
+        # Set the window to a fixed size
+        self.setFixedSize(self.size())
 
-        # Show the encrypt widget by default
-        self.show_encrypt_widget()
-
-    def show_decrypt_widget(self):
-        self.central_widget.setCurrentWidget(self.decrypt_widget)
-        self.statusBar().showMessage('Decrypt')
-
-    def show_encrypt_widget(self):
-        self.central_widget.setCurrentWidget(self.encrypt_widget)
-        self.statusBar().showMessage('Encrypt')
-
-    def show_generate_key_widget(self):
-        self.central_widget.setCurrentWidget(self.generate_key_widget)
-        self.statusBar().showMessage('Generate Key')
-
-    def show_settings_widget(self):
-        self.central_widget.setCurrentWidget(self.settings_widget)
-        self.statusBar().showMessage('Settings')
+    def update_ui(self, index):
+        self.stacked_widget.setCurrentIndex(index)
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow(app)
-    window.setWindowFlags((window.windowFlags() & ~QtCore.Qt.WindowMaximizeButtonHint) | QtCore.Qt.WindowCloseButtonHint)
-    window.setFixedSize(window.size())
-    window.show()
+    window.main_window.show()
     sys.exit(app.exec_())
