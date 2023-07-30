@@ -25,7 +25,7 @@ Download the ZIP file of this repository and extract it.
 Install the required Python packages with the following command:
 
 ```bash
-pip install pyqt5 qdarkstyle cryptography
+pip install pyqt5 qdarkstyle cryptography qtmodern
 ```
 ## Usage
 Navigate to the directory containing the PYHOCK.py script and run the script with the following command:
