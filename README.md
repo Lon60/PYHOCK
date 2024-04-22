@@ -30,9 +30,21 @@ pip install pyqt5 qdarkstyle cryptography qtmodern
 ## Usage
 Navigate to the directory containing the PYHOCK.py script and run the script with the following command:
 ```bash
-python PYHOCK.py
+python ./app/main.py
 ```
 Choose the desired action from the "PYHOCK" dropdown menu: Encrypt, Decrypt, Generate Key, or Settings.
+
+## Command Line Usage
+
+For users who prefer operating from the terminal, PYHOCK also provides a command-line interface (CLI), which offers the same functionality as the GUI but in a scriptable format. This is particularly useful for automating tasks or integrating with other software solutions.
+
+### Features
+
+- **Automated Key Generation**: Generate encryption keys automatically with a command-line argument.
+- **File Encryption**: Encrypt files quickly by specifying the file path and key directly in the command.
+- **File Decryption**: Decrypt files easily using the command line by providing the file path and the correct decryption key.
+- **Ease of Use**: Simplify repetitive tasks using scripts or integrate encryption and decryption into larger workflows.
+
 ## License
 
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT/).
